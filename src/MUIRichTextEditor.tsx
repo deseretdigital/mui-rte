@@ -90,7 +90,8 @@ type TKeyCommand = {
 
 interface IMUIRichTextEditorProps extends WithStyles<typeof styles> {
     id?: string
-    value?: any
+    // value?: any
+    editorState: EditorState,
     label?: string,
     readOnly?: boolean
     inheritFontSize?: boolean
@@ -175,33 +176,33 @@ const findDecoWithRegex = (regex: RegExp, contentBlock: any, callback: any) => {
     }
 }
 
-const useEditorState = (props: IMUIRichTextEditorProps) => {
-    const decorators: DraftDecorator[] = [
-        {
-            strategy: findLinkEntities,
-            component: Link,
-        }
-    ]
-    if (props.decorators) {
-        props.decorators.forEach(deco => decorators.push({
-            strategy: (contentBlock: any, callback: any) => {
-                findDecoWithRegex(deco.regex, contentBlock, callback)
-            },
-            component: deco.component
-        }))
-    }
-    const decorator = new CompositeDecorator(decorators)
-    return (props.value)
-        ? EditorState.createWithContent(convertFromRaw(JSON.parse(props.value)), decorator)
-        : EditorState.createEmpty(decorator)
-}
+// const useEditorState = (props: IMUIRichTextEditorProps) => {
+//     const decorators: DraftDecorator[] = [
+//         {
+//             strategy: findLinkEntities,
+//             component: Link,
+//         }
+//     ]
+//     if (props.decorators) {
+//         props.decorators.forEach(deco => decorators.push({
+//             strategy: (contentBlock: any, callback: any) => {
+//                 findDecoWithRegex(deco.regex, contentBlock, callback)
+//             },
+//             component: deco.component
+//         }))
+//     }
+//     const decorator = new CompositeDecorator(decorators)
+//     return (props.value)
+//         ? EditorState.createWithContent(convertFromRaw(JSON.parse(props.value)), decorator)
+//         : EditorState.createEmpty(decorator)
+// }
 
 const MUIRichTextEditor: RefForwardingComponent<any, IMUIRichTextEditorProps> = (props, ref) => {
     const { classes, controls, customControls } = props
     const [state, setState] = useState<IMUIRichTextEditorState>({})
     const [focus, setFocus] = useState(false)
-
-    const [editorState, setEditorState] = useState(() => useEditorState(props))
+    // const [editorState, setEditorState] = useState(() => useEditorState(props))
+    const editorState = props.editorState
     const [customRenderers, setCustomRenderers] = useState<TCustomRenderers>({
         style: undefined,
         block: undefined
@@ -232,7 +233,7 @@ const MUIRichTextEditor: RefForwardingComponent<any, IMUIRichTextEditorProps> = 
     }))
 
     useEffect(() => {
-        const editorState = useEditorState(props)
+        // const editorState = useEditorState(props)
         const customBlockMap: any = {}
         const customStyleMap = JSON.parse(JSON.stringify(styleRenderMap))
         if (props.customControls) {
@@ -252,12 +253,13 @@ const MUIRichTextEditor: RefForwardingComponent<any, IMUIRichTextEditorProps> = 
             style: customStyleMap,
             block: DefaultDraftBlockRenderMap.merge(blockRenderMap, Immutable.Map(customBlockMap))
         })
-        setEditorState(editorState)
+        // setEditorState(editorState)
         toggleMouseUpListener(true)
         return () => {
             toggleMouseUpListener()
         }
-    }, [props.value])
+    // }, [props.value])
+    }, []) // should editorState be in the deps here?
 
     useEffect(() => {
         editorStateRef.current = editorState
@@ -312,7 +314,7 @@ const MUIRichTextEditor: RefForwardingComponent<any, IMUIRichTextEditorProps> = 
     }
 
     const handleChange = (state: EditorState) => {
-        setEditorState(state)
+        // setEditorState(state)
         if (props.onChange) {
             props.onChange(state)
         }
@@ -352,7 +354,10 @@ const MUIRichTextEditor: RefForwardingComponent<any, IMUIRichTextEditorProps> = 
             }
         })
         newEditorState = RichUtils.toggleBlockType(newEditorState, selectionInfo.blockType)
-        setEditorState(newEditorState)
+        // setEditorState(newEditorState)
+        if (props.onChange) {
+            props.onChange(newEditorState)
+        }
     }
 
     const handleSave = () => {
@@ -402,7 +407,10 @@ const MUIRichTextEditor: RefForwardingComponent<any, IMUIRichTextEditorProps> = 
                     const newState = control.onClick(editorState, control.name, document.getElementById(id))
                     if (newState) {
                         if (newState.getSelection().isCollapsed()) {
-                            setEditorState(newState)
+                            // setEditorState(newState)
+                            if (props.onChange) {
+                                props.onChange(newState)
+                            }
                         }
                         else {
                             updateStateForPopover(newState)
@@ -420,11 +428,17 @@ const MUIRichTextEditor: RefForwardingComponent<any, IMUIRichTextEditorProps> = 
     }
 
     const handleUndo = () => {
-        setEditorState(EditorState.undo(editorState))
+        // setEditorState(EditorState.undo(editorState))
+        if (props.onChange) {
+            props.onChange(EditorState.undo(editorState))
+        }
     }
 
     const handleRedo = () => {
-        setEditorState(EditorState.redo(editorState))
+        // setEditorState(EditorState.redo(editorState))
+        if (props.onChange) {
+            props.onChange(EditorState.redo(editorState))
+        }
     }
 
     const handlePrompt = (lastState: EditorState, type: "link" | "media", inlineMode?: boolean) => {
@@ -556,7 +570,10 @@ const MUIRichTextEditor: RefForwardingComponent<any, IMUIRichTextEditorProps> = 
         const mediaBlock = contentState.getBlockForKey(blockKey)
         const newContentState = removeBlockFromMap(editorState, mediaBlock)
         const newEditorState = EditorState.push(editorState, newContentState, "remove-range")
-        setEditorState(newEditorState)
+        // setEditorState(newEditorState)
+        if (props.onChange) {
+            props.onChange(newEditorState)
+        }
     }
 
     const confirmMedia = (url?: string, width?: number, height?: number, alignment?: TAlignment, type?: TMediaType) => {
@@ -594,7 +611,10 @@ const MUIRichTextEditor: RefForwardingComponent<any, IMUIRichTextEditorProps> = 
     }
 
     const updateStateForPopover = (editorState: EditorState) => {
-        setEditorState(editorState)
+        // setEditorState(editorState)
+        if (props.onChange) {
+            props.onChange(editorState)
+        }
         refocus()
         setState({
             ...state,
@@ -611,21 +631,37 @@ const MUIRichTextEditor: RefForwardingComponent<any, IMUIRichTextEditorProps> = 
     }
 
     const toggleBlockType = (blockType: string) => {
-        setEditorState(
-            RichUtils.toggleBlockType(
-                editorState,
-                blockType
+        // setEditorState(
+        //     RichUtils.toggleBlockType(
+        //         editorState,
+        //         blockType
+        //     )
+        // )
+        if (props.onChange) {
+            props.onChange(
+                RichUtils.toggleBlockType(
+                    editorState,
+                    blockType
+                )
             )
-        )
+        }
     }
 
     const toggleInlineStyle = (inlineStyle: string) => {
-        setEditorState(
-            RichUtils.toggleInlineStyle(
-                editorState,
-                inlineStyle
+        // setEditorState(
+        //     RichUtils.toggleInlineStyle(
+        //         editorState,
+        //         inlineStyle
+        //     )
+        // )
+        if (props.onChange) {
+            props.onChange(
+                RichUtils.toggleInlineStyle(
+                    editorState,
+                    inlineStyle
+                )
             )
-        )
+        }
     }
 
     const focusMedia = (block: ContentBlock) => {
@@ -633,7 +669,10 @@ const MUIRichTextEditor: RefForwardingComponent<any, IMUIRichTextEditorProps> = 
         const newEditorState = EditorState.forceSelection(editorStateRef.current!, newSeletion)
         editorStateRef.current = newEditorState
         setFocusMediaKey(block.getKey())
-        setEditorState(newEditorState)
+        // setEditorState(newEditorState)
+        if (props.onChange) {
+            props.onChange(newEditorState)
+        }
         handlePromptForMedia(false, newEditorState)
     }
 
@@ -780,4 +819,5 @@ const MUIRichTextEditor: RefForwardingComponent<any, IMUIRichTextEditorProps> = 
     )
 }
 
+// export { Link }
 export default withStyles(styles, { withTheme: true, name: "MUIRichTextEditor" })(forwardRef(MUIRichTextEditor))
