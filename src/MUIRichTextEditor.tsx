@@ -315,7 +315,9 @@ const MUIRichTextEditor: RefForwardingComponent<any, IMUIRichTextEditorProps> = 
 
     const handleChange = (state: EditorState) => {
         // setEditorState(state)
-        handleChange(state)
+        if (props.onChange) {
+            props.onChange(state)
+        }
     }
 
     const handleBeforeInput = (): DraftHandleValue => {
